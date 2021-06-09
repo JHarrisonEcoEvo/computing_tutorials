@@ -1,0 +1,107 @@
+---
+title: "reticulate"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+```
+
+Reticulate is a handy way to combine Python and R code. From the reticulate help page suggests that reticulate allows for: "Calling Python from R in a variety of ways including R Markdown, sourcing Python scripts, importing Python modules, and using Python interactively within an R session. Translation between R and Python objects (for example, between R and Pandas data frames, or between R matrices and NumPy arrays). Flexible binding to different versions of Python including virtual environments and Conda environments."
+
+This all is great. To get objects from R to Python and vice versa requires some manipulation. Demonstrating how to do this is the point of this markdown file. 
+
+First, lets make a Python code chunk. To do this, simply specify Python or python in between the braces that start the code chunk (if using R then there would be an r in between these braces). Be sure to read the annotation (following the hash symbol) in the code chunks to understand what the functions do.
+
+```{python}
+#We can specify a variable using the equal sign, just like in R and many other languages
+DNASeq = 'ATGAAC'
+#Length lets us figure out how long an object is. This is handier then a pocket in a shirt, as my Mom would say. 
+SeqLength = len(DNASeq)
+#we can print to STDOUT using print. Note that to print strings they need to be in single quotes. 
+print ('Sequence Length:', SeqLength)
+```
+Common classes of objects in Python are strings, floats, and integers. These are in R too, but R calls floats by the name of 'numeric'. Lets try making each type of data in R and then using that object in Python.
+```{r}
+ourNumeric <- 0.1
+ourString <- "AARRGGHH"
+ourInteger <- as.integer(1)
+```
+Lets try porting these over to Python. To access R variabels we use the construct, `r.yourvariable', where the critical thing is the 'r.' prefix. 
+
+```{python}
+print r.ourNumeric
+len(r.ourString)
+#add the two values together, since one is a float and one is an integer, this is an addition operation, not a concatenation.
+print r.ourNumeric + r.ourInteger 
+#Since we are adding a string and a float this will fail, unless we coerce the float to a string. We do this via str() and then this command becomes a concatenation operation. In R, we would use paste(), probably, to do this.
+print str(r.ourNumeric) + r.ourString
+```
+What about going the other way, from Python to R? Lets first make some objects in Python, again, of various classes. 
+
+```{python}
+pyFloat = 0.1 #remember float allows for a decimal and is like numeric in r
+pyString = 'Howdy'
+pyInt = 100 
+```
+If we want to use these objects in r, we can access them via the prefix "py$" like so...
+
+```{r}
+class(py$pyFloat)
+py$pyFloat
+
+class(py$pyString)
+py$pyString
+
+class(py$pyInt)
+py$pyInt
+```
+Note that the float (numeric) and integer classes were preserved during the transition.
+
+Lets do something more interesting. Lets say we have a long string from R and we want to count how many times a particular substring is present. Python has a handy function called count that does this in a way that I feel is a little cleaner then R because we don't have to call a module. First R then Python:
+
+```{r}
+bigfootDNA <- "AAATTTCCCGGGAATTCGATCGACTACGACTCGYARRGGGARATCGCGCAGCRARRGG"
+stringr::str_count(bigfootDNA,'ARRG')
+```
+
+```{python}
+#Capitalizing variables can be helpful in python, to differentiate them from functions
+Bigfoot = r.bigfootDNA
+Bigfoot.count('ARRG')
+#Double quotes would work too...
+Bigfoot.count("ARRG")
+```
+Python allows for useful string creation via the % operator. Like this:
+```{python}
+#This is called interpolation.
+print "There are %d 'AARG' strings within bigfoot DNA." % (Bigfoot.count("ARRG"))
+#Or assigning to an object
+#bigfootCount = "%d" % (Bigfoot.count("ARRG"))
+```
+
+This seems slightly better than using paste in R to do the same thing, due to being a bit more readable.
+```{r}
+print(paste("There are ", 
+             stringr::str_count(bigfootDNA,'ARRG'),
+            " 'AARG' strings within bigfoot DNA.", sep = ""))
+```
+
+A very useful aspect of Python is the dir function. This lets one see the objects and methods (stuff you can do to the object) nested within an object. It is like str() in R in that it lets you see inside the object, but additionally it lets you see methods inside the object too!
+
+```{python}
+dir(Bigfoot)
+```
+
+Lets try a few of these out! Put () at the end of the call.
+```{python}
+Bigfoot.upper()
+Bigfoot.lower()
+Bigfoot.startswith('A') #returns logical. Is a test if the string starts with a character.
+```
+
+Conversion of dictionaries (hashes) in python to lists in R and vice versa. 
+
+
+goo dway to make named lists?
