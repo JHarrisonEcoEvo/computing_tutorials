@@ -7,6 +7,8 @@ For more on my research see [jgharrison.weebly.com](https://jgharrison.weebly.co
 
 ### General computing
 
+[How to use make](https://github.com/JHarrisonEcoEvo/Reproducible_workflow_tutorial#readme) - Make is a tool for automating workflow management. Say you get new data and have to rerun code, make figures, and incorporate them into a document. Make lets you automate this process, among other things. 
+
 ### Bioinformatics
 
 ### Machine learning
