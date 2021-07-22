@@ -38,9 +38,9 @@ library(xgboost)
 
 # unleash the beast (actually, I need to learn more about this package and when it is helpful...hah)
 #install.packages(doParallel)
-library(doParallel)
-all_cores <- parallel::detectCores(logical = FALSE)
-registerDoParallel(cores = all_cores)
+# library(doParallel)
+# all_cores <- parallel::detectCores(logical = FALSE)
+# registerDoParallel(cores = all_cores)
 
 set.seed(666)
 ```
@@ -85,7 +85,7 @@ Note that I already did a lot of feature engineering on these (imputing, etc.), 
 From the help, "A 'recipe' is a description of the steps to be applied to a data set in order to prepare it for data analysis." To initiate a recipe we use R's standard formula syntax:
 ```{r}
 phyllo_recipe <- 
-  recipe(response_taxon ~ ., data = merged_dat) 
+  recipe(response_taxon ~ ., data = training(merged_dat_split)) 
 ```
 This object is a tibble and looks like this
 ```{r}
@@ -95,11 +95,11 @@ Note the column for 'role' this holds info about what the feature is for. Predic
 ```{r}
 #adding some roles
 phyllo_recipe <- 
-  recipe(response_taxon ~ ., data = merged_dat) %>%
+  recipe(response_taxon ~ ., data = training(merged_dat_split)) %>%
           update_role(
             names(merged_dat)[1:11], #stuff we want to recode the role of, also next two lines below
             stratify, 
-            X.1.y, 
+           # X.1.y, 
             new_role = "ID")
 summary(phyllo_recipe)
 ```
@@ -117,7 +117,7 @@ Alright, once you have a recipe sorted and your ingredients prepped you got to p
 ```{r}
 phyllo_chopped <- bake(
     phyllo_recipe, 
-    new_data = merged_dat_split
+    new_data = training(merged_dat_split)
   ) %>%  
   rsample::vfold_cv(v = 5)
 ```
@@ -148,7 +148,7 @@ xgboost_params <-
 ```
 Then we specify how to explore this space. From the help, "The types of designs supported here are latin hypercube designs and designs that attempt to maximize the determinant of the spatial correlation matrix between coordinates."
 
-We are using the latter, max entropy approach. This is a way to try and make sure that the choices we make are far apart and explore a lot of the parameter space. 
+We are using the latter, max entropy approach. This is a way to try and make sure that the choices we make are far apart and explore a lot of the parameter space. I am not sure what a Latin hypercube is yet.
 ```{r}
 xgboost_grid <- 
   dials::grid_max_entropy(
@@ -175,7 +175,7 @@ Seems fairly rad. Here is how to make one.
       add_model(xgboost_model) %>% 
       add_formula(response_taxon ~ .)
 ```
-Now we do some tuning. THIS IS A BIG WIN over sklearn. The Hyperopt package allows for smart hyper parameter tuning, and isn't too hard to figure out, but this is way easier. Also, getting the user-friendly hyperopt wrapper hpsklearn installed can be a bit tricky. This is better. 
+Now we do some tuning. THIS IS A BIG WIN OVER SKLEARN. The Hyperopt package for sklearn allows for smart hyper parameter tuning, and isn't too hard to figure out, but this is way easier. Also, getting the user-friendly hyperopt wrapper hpsklearn installed can be a bit tricky and caused problems for me on Teton. This takes a lot less effort all around. 
 ```{r}
 xgboost_tuned <- tune::tune_grid(
   object = xgboost_wf,
@@ -185,8 +185,24 @@ xgboost_tuned <- tune::tune_grid(
   control = tune::control_grid(verbose = TRUE)
 )
 ```
-FAILING HERE, probably bc I have one level or an NA in one of my factors after splitting. 
+FAILING HERE, probably bc I have one level or an NA in one of my factors after splitting. I am leaving this issue in the Rmd, since others may experience it as well. The notes state, "This tuning result has notes. Example notes on model fitting include: preprocessor 1/1: Error in stats::`contrasts<-`(x, how_many, value): contrasts can be applied only to factors with 2 or more levels"
 
+I suspect this is because of NAs or, more likely, one of the factors has only one level after splitting the data.
+```{r}
+#look for NAs. None
+table(is.na(training(merged_dat_split)))
+
+toexamine <- phyllo_chopped$splits[[1]]$data[,min(grep("Abies", names(merged_dat))):length(merged_dat) ]
+for(i in 1:(length(toexamine)-2)){
+  if(1 %in% names(table(toexamine[,i]))){next}
+  else{
+    print("hold up")
+    print(names(toexamine)[i])
+    print(table(toexamine[,i]))
+  }
+}
+
+```
 See what worked best...
 ```{r}
 xgboost_tuned %>%
