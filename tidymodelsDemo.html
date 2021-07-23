@@ -924,7 +924,14 @@ hist( test_prediction$response_taxon, main = &quot;&quot;)</code></pre>
 <div id="summary" class="section level1">
 <h1>Summary</h1>
 <p>tidymodels has some real nice advantages and I think it is pretty damn sweet.</p>
-<p>Pros include: * Great documentation and a large number of easy reading blog posts to help. * Since it is in R we get some of the nice things about R including a good IDE, simplified environment issues compared to Python, and better plotting options (at least given my background). * I like the roles feature during recipe building, but, sadly, this is not inherited. * Very little cognitive load to do a lot of complicated stuff. Writing code to do feature engineering, cross validation, tuning, etc. is a lot and we don’t need to do it anymore. * Simpler to use and install than sklearn, particularly regarding tuning as the Hyperopt package and the hpsklearn packages are a bit tricky.</p>
+<p>Pros include:</p>
+<ul>
+<li>Great documentation and a large number of easy reading blog posts to help.</li>
+<li>Since it is in R we get some of the nice things about R including a good IDE, simplified environment issues compared to Python, and better plotting options (at least given my background).</li>
+<li>I like the roles feature during recipe building, but, sadly, this is not inherited.</li>
+<li>Very little cognitive load to do a lot of complicated stuff. Writing code to do feature engineering, cross validation, tuning, etc. is a lot and we don’t need to do it anymore.</li>
+<li>Simpler to use and install than sklearn, particularly regarding tuning as the Hyperopt package and the hpsklearn packages are a bit tricky.</li>
+</ul>
 <p>Cons include:</p>
 <ul>
 <li>Because some of the functions do so much it was a bit tricky for me to know for sure that everything that I wanted to happen did indeed happen. A verbose option would help that prints to stdout all the things happening in easy to use terms. As is, I found myself poking around in objects to see what was what (hidden from this markdown)</li>
@@ -932,7 +939,11 @@ hist( test_prediction$response_taxon, main = &quot;&quot;)</code></pre>
 <li>There are a lot of packages within the tidymodels universe and it seems like they should be in one bigger package to me, thus streamlining dependency issues and making updates easier. I am sure they did what they did for a reason though..</li>
 <li>I was hoping stuff from the recipe would be inherited to other functions, like the roles. If all was in one package this would be easier because then one could expect inheritance among functions within the package but not outside of the package, and it would be easier to tell which was which.</li>
 </ul>
-<p>Things yet to learn: * Unsure about scalability in terms of support for parallel processing, depending on the model. * I don’t yet know how to pass in specific ranges for tuning options. I suspect this is simple…</p>
+<p>Things yet to learn:</p>
+<ul>
+<li>Unsure about scalability in terms of support for parallel processing, depending on the model.</li>
+<li>I don’t yet know how to pass in specific ranges for tuning options. I suspect this is simple…</li>
+</ul>
 </div>
 
 

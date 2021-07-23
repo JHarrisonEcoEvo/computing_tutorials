@@ -367,6 +367,7 @@ So, this is a wacky case... so a great way to see how tidymodels works when thin
 tidymodels has some real nice advantages and I think it is pretty damn sweet. 
 
 Pros include:
+
 * Great documentation and a large number of easy reading blog posts to help.
 * Since it is in R we get some of the nice things about R including a good IDE, simplified environment issues compared to Python, and better plotting options (at least given my background).
 * I like the roles feature during recipe building, but, sadly, this is not inherited. 
@@ -381,6 +382,7 @@ Cons include:
 * I was hoping stuff from the recipe would be inherited to other functions, like the roles. If all was in one package this would be easier because then one could expect inheritance among functions within the package but not outside of the package, and it would be easier to tell which was which.
 
 Things yet to learn:
+
 * Unsure about scalability in terms of support for parallel processing, depending on the model. 
 * I don't yet know how to pass in specific ranges for tuning options. I suspect this is simple...
 
