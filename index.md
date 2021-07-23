@@ -12,5 +12,6 @@ For more on my research see [jgharrison.weebly.com](https://jgharrison.weebly.co
 ### Bioinformatics
 
 ### Machine learning
-[A brief intro to scikit-learn](https://jharrisonecoevo.github.io/computing_tutorials/sklearn_primer.html) <br>
-[tidymodels: what's up](https://jharrisonecoevo.github.io/computing_tutorials/tidymodelsDemo.html) <br>
+* [A brief intro to scikit-learn](https://jharrisonecoevo.github.io/computing_tutorials/sklearn_primer.html) <br>
+
+* [tidymodels: what's up](https://jharrisonecoevo.github.io/computing_tutorials/tidymodelsDemo.html) <br>
