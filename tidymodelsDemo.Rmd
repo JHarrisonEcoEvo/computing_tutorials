@@ -352,7 +352,7 @@ Try and extract model object and predicted values while avoiding the cumbersome 
 #cor.test(test_prediction$.pred, test_prediction$response_taxon)
 par(mfrow = c(1,2))
 plot(test_prediction$.pred, test_prediction$response_taxon)
-hist( test_prediction$response_taxon)
+hist( test_prediction$response_taxon, main = "")
 ```
 
 Maybe the prediction is so good because the taxon is hardly ever there! Yup.
