@@ -346,6 +346,7 @@ xgboost_wf %>%
   extract_fit_parsnip() %>%
   vip(geom = "point")
 ```
+
 Try and extract model object and predicted values while avoiding the cumbersome piping nonsense. 
 ```{r}
 #cor.test(test_prediction$.pred, test_prediction$response_taxon)
@@ -353,6 +354,7 @@ par(mfrow = c(1,2))
 plot(test_prediction$.pred, test_prediction$response_taxon)
 hist( test_prediction$response_taxon)
 ```
+
 Maybe the prediction is so good because the taxon is hardly ever there! Yup.
 ```{r}
 summary(test_prediction$response_taxon)
