@@ -1,0 +1,209 @@
+---
+title: "Making R packages"
+author: "J. G. Harrison"
+date: "1/18/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## What is an R package?
+
+Most of the time when we do stuff in R we use functions to accomplish a task. We can either write our own functions or use those that others have written and collated together into an R package (e.g., tidyr, vegan). R packages also typically contain some documentation that explains how to use the function (accessible via the ? command and by reading the manual). While not required components, packages also often contain some sample data that can be used to try out the package functions; a 'vignette', which is a simple tutorial; and sometimes compiled code (e.g., Stan functions).
+
+Packages that are dispersed to people are typically stored on CRAN (the Comprehensive R Archive Network). CRAN has very picky rules that can be annoying during development, but that is why R works so well. R packages are also hosted online in other places, like GitHub or private websites. As you will see, you can host an R package wherever you want. You don't have to host a package or make it available to anyone. You can have a package that only lives on your laptop and that no one else will ever use.
+
+## Why make a package?
+
+Do you find yourself recycling functions over and over and copying and pasting them between programs? If so, then put the functions into a simple package that can be loaded easily. Did you develop a new technique that you want to share? Make a package. There are a lot of packages that just make other packages easier to use, so you can get meta like that if you want.
+
+## What are the components of a package?
+
+The things that compose an R package are stored in a directory that has a specific organization. As you have guessed, there is some R code in the directory. This is referred to as the 'source' code and stored in sub-directory called R/, with R code in text files ending in '.R'. There also is a file called the 'DESCRIPTION' that has useful info about a package, like its name, who made it, the version, the license, the encoding, and, importantly, any dependencies needed to run the package. If you plan to disperse your package to others than the 'NAMESPACE' file will also be important. This file describes the names of the functions that are imported or exported from the package, thus avoiding issues where multiple packages have functions with the same name. You will probably also want a sub-directory called 'man' that has documentation for your functions.
+
+## This sounds confusing, how do I start?
+
+There are a few packages that help construct packages through automatically making a lot of the components of a package (like the NAMESPACE). That is a lot of 'package' in one sentence. 
+
+'devtools' and 'roxygen2' are the two package--making-helper-packages that I use. Devtools does all sorts of useful stuff for development and roxygen helps with documentation. I will show you how to use these two packages below.
+
+## References
+
+There is a whole online book on making R packages that is really easy to read and sort through. It is available here: [R packages, by Hadley Wickham and Jenny Bryan](https://r-pkgs.org/index.html)
+
+If you have detailed questions about any part of the package building process, then that book is a good place to start. I used their the ``The whole game'' section as inspiration for this tutorial.
+
+## Let's make a package
+
+First lets load devtools and then use the `create_package' function to make a new package directory. Put the directory somewhere sensible, do NOT put it where your installed packages live (e.g., on a Mac this is: Library/Frameworks/R.framework/Resources/library/). We will do that later when we install the package. Use your desktop, or scratch disk, or wherever you like. 
+
+Let's try and make a package called "yay_package".
+
+```{r, error=TRUE}
+library(devtools)
+create_package("~/gitRepo/yay_package")
+```
+If you run this command you will get an error about the package name.
+
+This means that we have some non-standard characters in our package name that CRAN won't like. CRAN doesn't like a lot of things, so get used to it if you plan on submitting a package. I did this so you can see how devtools catches a lot of problems for you.
+
+The issue is the pesky underscore in the title. Let's remove that and see if the error goes away.
+
+```{r}
+create_package("~/gitRepo/yaypackage")
+```
+No error and if you are running this in R studio a new instance just opened that puts you in the directory with your nascent package. 
+
+Lets see what is in the DESCRIPTION that devtools made. Behold:
+```{r}
+list.files("~/gitRepo/yaypackage")
+```
+The DESCRIPTION file has this in it: 
+```{bash}
+less ~/gitRepo/yaypackage/DESCRIPTION
+```
+You can open that up and change things as you like. Look up the licenses section of the aforementioned book to help you figure that out.
+
+Lets look at the NAMESPACE. We will explain this later. If you are following along, your NAMESPACE won't have anything in it yet. This one does, since I already completed this script before rendering the markdown.
+```{bash}
+less ~/gitRepo/yaypackage/NAMESPACE
+```
+The yaypackage.Rproj file just makes the whole thing an R project, for convenience. You don't need this if you don't want it. 
+
+The R sub-directory is where we want to add our function. Lets make one. First, we define the function, as per usual. Then we add it to a text file ending in .R. Do all that stuff now.
+
+```{r}
+yayR <- function(x){
+  print("yay")
+}
+```
+
+What about documentation? We want users (including ourselves) to be able to type '?yayR' and have a useful help message come up. Roxygen2 makes this much easier. It looks within source files for specific formatting and converts that formatting to a man page for the function. Open up the yayR function text file and type the following into it right above the function:
+
+```{r}
+#' YayR
+#' 
+#' The ultimate feel good function
+#'
+#' @param x Any object. Could be a number, a string, a dataframe, anything that R understands as an object.
+#'
+#' @return A statement of happiness, just for you!
+#' @export
+#'
+#' @examples
+#' yayR(3)
+#' yayR(data.frame("test))
+#'  @export
+```
+First, you can see that I provided a name and explanation for the function. Then there is a statement called '@param' followed by the parameters input to the function. It is best to explain precisely what each parameter can be, so that users won't get confused. '@return' is what the function returns. '@examples' have a few examples for how to use the function.  '@export' means to export the function that follows to the namespace (with dependent functions, see below). 
+
+If you have looked at R help pages before you will recognize this format. If you have not, then type '?somefunction" to look at the help page for some function that you have loaded from a favorite library. 
+
+In my opinion, time spent on documentation is well spent. Nothing sucks worse than trying to figure out a package that is poorly documented---one almost always has to dig into the source code, which is a waste of time.
+
+Ok, now use roxygen to populate the man pages for this package.
+```{r}
+library(roxygen2)
+roxygenize("../yaypackage/") #change the path as you need.
+```
+You should now have a sub-directory called 'man' that has a file in it called 'yayR.Rd'. Inside this you will find...
+
+```{bash}
+less ../yaypackage/man/yayR.Rd
+```
+You can see the general format of the man page. Of course, you could type this all yourself, but it is simpler to let roxygen do the work. Incidentally, the document() command of devtools can do this too.
+
+Also, check out our NAMESPACE after we ran roxygen. It now exports the function we just defined. Again, you could edit this stuff by hand, but it is a lot simpler to use roxygen.
+
+```{bash}
+less ../yaypackage/NAMESPACE
+```
+
+## What about dependencies?
+
+What if your package calls functions from some other package? These dependencies need to be specified in the DESCRIPTION and NAMESPACE. When specifying the dependencies in the DESCRIPTION it ensures the necessary packages are installed when your new package gets installed, but it doesn't actually make the functions in the dependencies available. That is what the NAMESPACE is for. The 'import' directives in the NAMESPACE say which functions from which packages need to be made available when your new package is loaded. Lets try making the tidyr function a dependency to our yay package. 
+
+All we have to do is add the following "Imports:dplyr" to our DESCRIPTION.
+
+Now, upon installation the yaypackage will make sure the dplyr package is also installed.It is best practice to use the package::function() syntax when calling functions from dependencies in your source code. That way it is clear what came from where. Also, this syntax will help roxygen figure out import statements. 
+
+You then will want to add statements such as 'importFrom(dplyr,mutate)' to your NAMESPACE so that the correct functions are imported by your package. Roxygen2 will do this for you if you use the package::function() syntax. AND, you have a statement of the form '@import package' in one of your .R files, where 'package' is the package you are trying to load ('dplyr' in this case). I like having all the import statements in a NULL function, just because it seems orderly (see my [CNVRG package](https://github.com/JHarrisonEcoEvo/CNVRG)), but here we will simply add the import statement to our only function
+
+```{r}
+
+#' @importFrom dplyr tibble
+yayR <- function(x){
+  print("yay")
+  return(dplyr::tibble(x)) #the input is now returned as a tibble
+}
+rm(yayR) #ignore this, just doing this for the sake of the markdown
+```
+
+Here is another example from a package I made that imports various things through defining a NULL function.
+```{r}
+#' The 'CNVRG' package.
+#'
+#' @description This package implements Dirichlet multinomial modeling of relative abundance data using functionality provided by the 'Stan' software. The purpose of this package is to provide a user friendly way to interface with 'Stan' that is suitable for those new modelling.
+#'
+#' @docType package
+#' @name CNVRG-package
+#' @aliases CNVRG
+#' @useDynLib CNVRG, .registration = TRUE
+#' @import methods
+#' @import Rcpp
+#' @import tibble
+#' @importFrom vegan diversity
+#' @importFrom rstan sampling
+#'
+#' @references
+#' Stan Development Team (2018). RStan: the R interface to Stan. R package version 2.18.2.
+#'
+NULL
+```
+Once you have added the import statements, rerun roxygenize and check out your NAMESPACE. The importFrom directives should be present now. Note that is best form to import just those functions that you need, instead of whole packages. That way one doesn't do any accidental clobbering and also it keeps the environment clean. 
+
+## Install time
+
+Lets install the package. When we install a package the code gets moved into the place in our system that 'library()' looks to find packages. Installation happens via `R CMD INSTALL' which is a command line tool, or more easily using devtools::install(). Incidentally, the devtools family of install functions provides convenient ways to install from GitHub and do a few other things beyond what the standard 'install.packages()' function does. Lets install our package (note that you provide the path to the directory that has all the stuff we just made within it). 
+
+```{r}
+#install("../yaypackage")
+```
+Now, we can load the functions within the package into memory like normal, using the library() command. 
+
+## YOU JUST MADE A PACKAGE!
+
+Now whenever you load up R and type library(yaypackage) you can make awesome programs that print out 'yay' with any input! If only all computer work was so delightful : )
+
+## Some thoughts on best practices. 
+
+Read the online book I mentioned earlier for more on best practices, but at minimum make sure all your functions are well documented, paying particular attention to input and output. Users should be able to quickly determine exactly how data should be formatted for a function to work. Similarly, they should know exactly what the outputs returned from a function should look like. 
+
+Add conditionals and error messages to your functions to catch common problems. One can go overboard here and spend a lot of time with error handling. Try to strike a balance, where common issues are caught but the user has to assume some responsibility.
+
+Keep the R files organized. Make the functions alphabetical if there are more than one in a file. At first, it is easiest to keep each function in its own file, but for a complex package this may not make sense and grouping functions via some criterion may be better.
+
+## Sharing a package
+Next, you might want to share the package with someone. The way to do this is to share the directory we just made or, if you like, bundle the package up as a tarball and send it along. You can also host the package on GitHub and then anyone can install it via devtools::install_github("linktoyourpackage"). 
+
+Before you share a package consider running the check command of devtools. It helps spot problems, such as bugs in example code for each function. Running these checks is CRUCIAL if you are trying to submit to CRAN, see below.
+
+```{r, error=TRUE}
+devtools::check("../yaypackage/") 
+```
+It looks good actually. Just a warning about the license that is easily fixed. 
+
+## CRAN
+
+But maybe you want to get your invention on CRAN. If so then you must pass the CRAN gatekeepers, which ensure all packages meet various criteria. This is good, since it means that anything one downloads from CRAN has a certain format. Moreover, CRAN makes sure your package works on different systems. However, sometimes it is hard to meet CRAN's criteria, and, to be honest, it may not be worth the hassle. I have started seeing more packages that appear to be on GitHub or BioConductor and not on CRAN. However, there is some heuristic value to trying to get something on CRAN as you will likely learn something and be forced to deal with errors that might not be apparent on your system.
+
+Here is a [page by Karl Broman](https://kbroman.org/pkg_primer/pages/cran.html) that has some good info on getting a package on CRAN. devtools also offers some very helpful check functions that go through and do the checks that CRAN does and thus helps you find issues. Notably, you SHOULD use the win-builder tool linked in the Broman article to build your package on Windows. In my limited experience, since I work on Linux and Mac, getting things to build on Windows is always the problem. 
+
+Some gotchas. Watch out for unusual characters in your vignettes. I had a heck of a time tracking down some encoding issues with a vignette where certain characters wouldn't render right on Windows. I can't remember what I did to fix it, but I think I ended up just deleting all the unusual characters in the vignette (hyphens I think were the problem), grammar be damned! 
+
+Also, make sure your example code that goes with each function runs really fast. CRAN has a time limit of just a handful of seconds. Normally, this is not an issue, but I ran into problems when making a package that used Stan models because compiling the model took longer than the max allowable time for CRAN. Thus, I had to bundle the pre-compiled model with the package. This was tricky. See [here](https://cran.r-project.org/web/packages/rstantools/vignettes/minimal-rstan-package.html) for help, though some of this page did not work for me. If you are dispersing a package that uses Stan be prepared to fumble around a bit. 
+
+
+
