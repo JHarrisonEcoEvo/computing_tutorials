@@ -1,0 +1,224 @@
+---
+title: "How do we do Bayes: a really brief primer"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("rstan")
+library("rstan")
+options(mc.cores = parallel::detectCores())
+```
+
+# A window into the world of Bayes using R, Stan, and Rstan
+
+*Acknowledgment: much of the code here was copied from the internet. Most of the places I pulled code said they copied it from somewhere else. If the o.g. author is apparent then I will post that in comments within code blocks.*
+
+Outline
+
+* What do we need to do to run a Bayesian model?
+    + Specify distributions for the likelihood and prior (defining the model)
+    + Get samples from the posteriors of parameters of interest using a sampling algorithm
+    + Examine the samples to make sure we have converged.
+
+If you are new and the terminology mentioned in the outline is not clear, do not fear! Hopefully, this example will help. This script is designed as an appetizer, to show that specifying a model can be straightforward. To be fluent in Bayesian statistics does not come overnight, so be reasonable with yourself as you are learning this. For most people, it takes a while to feel comfortable with the different moving parts of doing Bayesian analysis. And, even for those of us that have done this for awhile, it requires considerable review to make totally different models from scratch. One idea is to first be able to get this code to run and understand it. Then, one can google and find many, many models already coded up that one can use. Finally, this should give one the experience to start making a bespoke model. 
+
+This code relies on Stan and Rstan. This is what wikipedia says about Stan: "Stan is a probabilistic programming language for statistical inference written in C++. The Stan language is used to specify a (Bayesian) statistical model with an imperative program calculating the log probability density function." To unpack this, Stan uses a specific syntax to specify a model, which it then turns into a compiled piece of software. When we write code for Stan, we are not writing R or Python, but writing Stan code. 
+
+Rstan is a handy package that lets us call up a compiled Stan model from R. 
+
+Installing Stan and Rstan can be cumbersome, depending on your computer. For help with this, send up a flag and somebody in the Data Science crew can try and help.
+
+# Let's make a model
+
+Say we want to estimate the mean of some data that look normally distributed (the good ol' Bell curve looking thing, see below). We could calculate the mean of the data using the formula we all know and love, but what if we want to know how certain we are in the mean, given our data? Another way of saying this we want to know the probability of our model given the data. The value of the mean is our model. It is a really simple model, but a model nonetheless. This is because we are hypothesizing that our data are sampled from a distribution with some mean. Lets make some data to illustrate: 
+```{r}
+y <- rnorm(n = 100, #Number of deviates
+          mean = 1.6, #Mean of distribution
+          sd = 0.2) #Standard deviation of the distribution
+
+hist(y)
+```
+
+So, for this histogram, we pulled 100 numbers from a normal distribution that had a mean of 1.6 and a standard deviation of 0.2. Cool. But what if we didn't know what the mean and standard deviation of the distribution was, instead all we had were the actual data. *This is the situation we are normally in as scientists*. We go measure some data (like tree heights) and have to figure out the mean of those data.
+
+So say all we had were those 100 numbers I generated above. 
+```{r}
+head(y)
+```
+And we wanted to estimate the mean. We could estimate via maximum likelihood, which is simply summing all these numbers and dividing by how many numbers there are (our usual approach).
+```{r}
+sum(y) / length(y) #or mean(y)
+```
+One could calculate confidence intervals around this estimate as well to figure out bounds between which we should expect the mean value. What we are saying here is that our data are most probable when the mean of the underlying distribution is 1.589654. But, what if we want turn that around and be able to state how probable our model is, given the data? Recall that our model for the data is a normal distribution with mean 1.589654 and we want to say how probable that model is given our data. 
+
+Let's bust out the Bayesian. Remember the formula:
+$$
+Pr(\theta | y) = \frac{Pr(y | \theta) Pr(\theta)}{Pr(y)}
+$$
+Theta is our model (the mean of our normal distribution) and y is the data. Recall that left hand side is called the posterior and can be read as "the probability of the model given the data". The right hand side numerator has two terms, the leftmost of which is called the likelihood. In words, this is "the probability of the data given the model"....recall how we used maximum likelihood above to choose a mean that made the data most likely, see the link in terminology! The other term in the numerator is the prior and is the probability of our model. 
+
+The denominator is the probability of the data. The reason that is there is to normalize the product of the likelihood and the prior so that it integrates to one. Remember that probability distributions need to integrate to one (if this is a new concept, then check out some reading on probability distributions).
+
+We can leave out this normalizing constant if want and say that the posterior is proportional to the likelihood times the prior. Folks like to do this because figuring out the probability of the data can be hard.
+$$
+Pr(\theta | y) \propto Pr(y | \theta) Pr(\theta)
+$$
+Note here that we are talking about probability *distributions*, not just single values.
+
+Ok, so we need to substitute in our model and data into this theorem. Let's focus on the right hand side...we need to calculate the probability of our data given our model (mean of 1.6, see above) and assign a prior probability distribution to the model. 
+
+We can make any prior distribution we want. We could say that we are really sure that 1.6 is a good model, or we could say that 1.6 is probably good, but we aren't super sure. Or, we could say, we have no damn idea what our model should be other than the mean of some normal distribution. I am gonna go with option one for now. If you are keen, then tweak this code to try out the other options (hint, mess with the variance and means of the priors).
+
+Next, we have to characterize these different prior probability distributions. As strange as it may seem, we can just pick values for our model, meaning we can pick values for the mean and standard deviation that we think the data may have come from. Let's do this in the context of a specified Stan model. 
+
+Recall that Stan let's us specify a model and does all the calculations for us. That is why I am using it here instead of using the probability density functions (PDF) of the normal distribution. Here is an example where someone does use the probability density functions: https://bookdown.org/kevin_davisross/bayesian-reasoning-and-methods/mean.html. 
+
+But I don't want to write that much math right now . :)
+Note, that if using PDFs is an unfamiliar concept, then it would be worth googling that a bit and gettin familiar with it. I just scanned this resource and it may be helpful (though a vast many others exist too): https://www.econometrics-with-r.org/2-1-random-variables-and-probability-distributions.html
+
+Stan, conveniently deals with all this for us. Notably, in some cases calculating probabilities via formula that provide solutions of certain forms (meaning that have understood distributions) may be super hard or impossible, Stan helps us out here too, as we will see. 
+
+To run a Stan model we have to make a text file that has the Stan code within it, then call that text file from within R using rstan or from within Python using pyStan. I have reproduced some Stan code here that will let us figure out the probability of a certain mean for our data.
+
+```{stan output.var='calcMeanNoLog.stan', eval = FALSE}
+//https://vasishth.github.io/bayescogsci/book/sec-firststan.html
+//http://hedibert.org/wp-content/uploads/2021/02/stan-rstan-examples.html
+data {
+  int n;                 // number of observations
+  real y[n];             // simulated data       
+}
+
+parameters {
+  real mu;               // mean
+  real<lower=0> sigma;   // standard deviation
+}
+
+model {
+  // likelihood
+  for(i in 1:n) {
+    y[i] ~ normal(mu,sigma);
+  }  
+  
+  // priors
+  mu ~ normal(2, 1);
+  sigma ~ exponential(1);
+}
+```
+This is not R code. While some things may look familiar (like the for loop) other stuff is different. Notably this code is turned into C++ code and compiled, it is not run sequentially like R. This is Stan code and is in a text file on my computer called calcMean.stan. If you want to run this, then you will need to paste this code into a file and change the path to that file in the R markdown accordingly. Pasting this code directly into your R session will not work. 
+
+You will notice that there are three bracketed sections. One for data, one for parameters, and one for model. Let's start with model because the other two sections just specify the nature of our variables that we use in the model. 
+
+Look at the inside of the loop, see the "normal(mu, sigma)" part? There is our likelihood function. We are saying our data, "y" are distributed as a normal distribution with some mean, mu, and some standard deviation, sigma. Ok, so why is this wrapped in a loop that goes from 1 to n? That is because we are modeling each datum within our vector of data y as being a draw (or deviate) from that normal distribution. We need to calculate the probability of seeing each datum that we saw, given the model and multiply those altogether to get a true picture of the probability of our data given the model (the likelihood). 
+
+Cool, next we have our priors, which are statements regarding how probable we think the model is. Our model is a normal, with a mean mu and some variance, so our priors are two probability distribution that tell us how probable different values for mu and sigma are. Imagine that we have prior knowledge (before seeing the data) that makes us think the mean is close to 2 -- likely between 1 and 3 and almost definitely between 0 and 4. We can encode this knowledge by using a prior for mu that is a normal distribution centered at 2 with a standard deviation of 1. Let's also say that we think the standard deviation of our data is likely between 0 and 1. We can encode this knowledge by using a prior for sigma that is an exponential distribution with a rate of 1. 
+
+
+Sometimes, it can be hard to figure out how to specify these distributions. For those seeking to learn more, it is best to start reading, see what others do, and experiment. Check out the resources at the end of this article. 
+
+We have our model specified, we will loop through our data, calculate the likelihood of each datum and multiply those together to get the full likelihood of our data given the model, then multiply all that by our prior probabilities for the model. 
+
+Stan also makes you declare your variables (C does this, R and Python do not). This means we have to say that a variable is allowed to hold a particular kind of data. For instance, in our data bracket we say that our variable "n" has to be an integer. We also say that all indices n of our vector of data y have to be real numbers. 
+
+We do the same thing for the parameters of our model, which are mu and sigma. We make both of them real numbers and stick a lower bound on sigma, since we don't want to have negative variance. 
+
+Stan files need to end in a blank line. As per usual, be wary of formatting (have semicolons to end lines, etc.). Find examples online and crib their syntax. Stan gives pretty good error messages most of the time, but various compiler errors can be cryptic. For a brand new model, be prepared to debug a bit.
+
+Next, we compile the model and make it callable from within R, using "stan_model" an rstan function.
+```{r}
+# Running stan code
+model <- stan_model("calcMeanNoLog.stan")
+```
+
+```{r, echo=TRUE}
+fitstan_HMC <- sampling(model,
+                        data = list(n = length(y),
+                                    y = y), 
+                        chains = 4, 
+                        iter = 2000, 
+                        warmup = 1000, 
+                        seed = 123,
+                        verbose = T)
+```
+Quick explanation of the call to the rstan::sampling() function: chains are the number of Monte Carlo chains that we run (more below), warmup is the number of samples we do before we start keeping track of the samples. iter is the *total* number of samples we do, so subtract warmup for this for how many samples we actually retain. cores is how many cpus we use. Seed is our random number seed (set this for reproducible results). Verbose means the software prints a bunch of stuff to the screen so we can see what is happening.
+
+So what are these things called samples and chains? Samples are the values suggested by Stan for the parameters of interest for our model. What happens when Stan does its thing is it picks values for all model parameters with probability defined by the distributions we specified in the model, substitutes these values into the model, and calculates the posterior. It then picks some new values and does this over and over. A bunch of these samples together make up a chain. There are different tools that Stan can use to pick samples, these are referred to as sampling algorithms and include: Metropolis, Metropolis-Hastings, Gibbs, and Hamiltonian Monte Carlo. It is beyond the scope of this tutorial to go into these, but if you do much Bayesian modeling you will want to get a high-level intuition (at least) of how these work, as well as alternative methods like variational inference. For now, we will just use the default sampler. 
+
+The point of all these samplers is to pick values for our model parameters so that once all the calculations are done we have well characterized the shape of the posterior probability distribution. We typically want to spend more time in parts of the distribution that are more probable, because that means the parameter values for our model are more probable. Remember that our whole goal was to calculate the probability of the model given the data. So the sampling algorithm may pick a sample, calculate the probability of the model given the data, then pick some other sample and do this over. If the new sample gives a higher probability of the model given the data, then the sampler goes "oh yeah, I'm doing something right" and keeps going in that direction. Other algorithms exist, but the main point is that these samplers try to "converge" on the correct shape of the probability distribution. 
+
+The point of having "warmup" (sometimes called "burn-in") samples is twofold. First, it gives Stan a chance to adaptively tune some of the parameters of the sampling algorithm, which will help it run more efficiently in the long run. Second, it gives the chains a chance to move toward regions of the posterior that have reasonably high probability. Say our first couple samples were terrible and made the model really improbable (like a mean of a million), it won't take too long for the sampler to propose a value that makes the model more probable. We keep doing this until the model converges on good values for the parameters and then starts to sample around those values, thus doing a good job characterizing the posterior (see figures below). This is also why we typically want multiple chains of samples, each of which started with different numbers. That way each chain converges and explores the posterior independently. We can put the chains together at the end if we want.
+
+Lets look at our chains for our parameters mu and sigma
+```{r}
+traceplot(fitstan_HMC, pars = c("mu", "sigma"))
+```
+
+These plots are called trace plots. We see that the trace plots vary around some mean and don't seem to be trending any direction. This means we have converged on a parameter estimate that makes the model probable. 
+
+We can also look at histograms of the samples. 
+```{r}
+stan_hist(fitstan_HMC, pars = c("mu", "sigma"))
+```
+
+
+We typically want to doublecheck via some simple statistics that convergence has happened. Shinystan has some great tools for this. Shinystan is an R package, see here: http://mc-stan.org/shinystan/index.html
+
+Because shinystan is a shiny app it doesn't work to put it in this markdown, but one would call it like this: shinystan(yourModelObject). We can also get a lot of info by printing the model object to the screen, like this: 
+
+```{r}
+fitstan_HMC
+```
+This helpful summary tells us the name of the model, info on chains, including warm up and thinning (how many samples are removed, so that samples are not too autocorrelated). 
+
+Then we see our parameters and the means and quantiles of the posteriors for those parameters. So our mu best estimate was 1.6 and our sigma was 0.2. Pretty good! That is exactly what we specified when we simulated the data. Moreover, we can make intuitive probability statements above our parameters, like "There's a 95% chance that the mean is between 1.57 and 1.64". That's something you can't do with a frequentist analysis! We could take all these samples and do stuff with them, thus propagating uncertainty into other analyses. Ask for examples, if you are curious. 
+
+Note the n-eff thing...this is the number of effective samples from the posterior. This tells you how many samples were taken that seem to be independent. More than 3,000 is plenty to characterize a normal distribution...but if your n-eff was like five, then maybe you would want to rerun the model while collecting more samples.
+
+Rhat is another diagnostic measure. It compares within and between chain variance (like an anova). If Rhat is way bigger than one then things are bad, because one's chains haven't converged on the same thing, but if rhat is near one then the chains are similar. See more here: https://mc-stan.org/rstan/reference/Rhat.html
+
+Yay, we are done. 
+
+# Pro tips
+
+When making a new model, simulate some data where the truth is known then run your model on it to make sure it works. 
+
+Be patient. This stuff is hard. 
+
+For models with vast numbers of parameters then one will either need to get clever regarding splitting up sampling or the model itself or consider tools like variational inference. Otherwise, stan will take too long.
+
+JAGS and BUGS are other tools that are analogous to Stan, but are becoming defunct because they are slower. They still work (and of course, for the masochistic one could make one's own sampler), but if you are just starting then start with Stan. 
+
+Stan models can also be specified using a different method, using sums of logs. Like this: 
+```{stan output.var='calcMeanLog.stan', eval = FALSE}
+data {
+  int<lower = 1> N;  // Our sample size
+  vector[N] y;  // Our data (a vector)
+}
+
+parameters {
+  real mu;
+  real<lower=0> sigma;
+}
+
+model {
+  // Priors:
+  target += normal_lpdf(mu | 1.7, 0.3);
+  target += lognormal_lpdf(sigma | 0, 1);
+  // Likelihood:
+  for(i in 1:N)
+    target += normal_lpdf(y[i] | mu, sigma);
+}
+```
+The "normal_lpdf" part means we are taking the logs of the PDF. The "+=" operator means we adding each of those values to the variable called "target". Target is a special variable used by Stan that is used to hold our posterior probability. Why are we adding up logged values? This is because multiplying logged probabilities is the same as adding the logs, but adding up a bunch of small values can be easier than multiplying tons of tiny values together (google underflow to learn more about this, basically the numbers for tiny probabilities can get so small the computer actually can't keep track. Doing this addition of logs trick is a common workaround).
+
+## References
+
+https://mc-stan.org/
+
+Unlike most software, the Stan documentation is totally fantastic. 
+
+https://xcelab.net/rm/statistical-rethinking/
+Statistical rethinking by McElrith is a super good intro to this stuff. I haven't read the whole thing, but the first few chapters are nice. 
+
+https://www.amazon.com/Doing-Bayesian-Data-Analysis-Tutorial/dp/0123814855
+The Kruschke puppy book. I found this helpful when I started, but am not sure that it has aged well. 
