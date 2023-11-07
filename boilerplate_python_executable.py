@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import click
 
 def fibb_seq(n: int):
