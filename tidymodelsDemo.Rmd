@@ -26,6 +26,7 @@ tidymodels imports a lot of stuff (see the chunk), but much of it is standard fo
 * workflowsets - makes a bunch of workflows
 * yardstick - model evaluation tools
 
+
 FYI if you are on an Apple the gower dependency probably won't install from source. The OS X compiler doesn't support openMP and so compilation will probably fail. Just install gower without compilation to get round this issue.
 ```{r}
 #install.packages("gower")
